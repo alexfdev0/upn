@@ -64,7 +64,36 @@ if action == "install" then
 		print("Running post install commands...")
 		os.execute(res_json.postinstall)
 	end
+
+	os.execute("touch /var/upn/" .. pkg .. ".rmv")
+
+	local file = io.open("/var/upn/" .. pkg .. ".rmv", "w")
+	file:write(res_json.remove)
+	file:close()
+	
 	print("Package '" .. pkg .. "' successfully installed.")
+elseif action == "remove" then
+	local pkg = arg[2]
+	if pkg == nil then
+		print("No package name supplied.")
+		os.exit(1)
+	end
+
+	local file = io.open("/var/upn/" .. pkg .. ".rmv")
+	if file == nil then
+		print("Package '" .. pkg .. "' not installed.")
+		os.exit(1)
+	end
+	local command = file:read("*a")
+	file:close()
+
+	print("Uninstalling package '" .. pkg .. "'")
+
+	os.execute(command)
+
+	os.execute("rm /var/upn/" .. pkg .. ".rmv")
+
+	print("Successfully uninstalled package '" .. pkg .. "'")
 else
 	print("Invalid action '" .. action .. "'")
 end
