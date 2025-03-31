@@ -67,6 +67,15 @@ local upn_ascii = [[
 
 local upn_ascii_chars = {}
 
+local handle = io.popen("id -u")
+local uid = tonumber(handle:read("*a"))
+handle:close()
+
+if uid ~= 0 then
+	print("\27[31mError:\27[0m Please run with super user permissions.")
+	os.exit(1)
+end
+
 for i = 1, #upn_ascii do
 	table.insert(upn_ascii_chars, string.sub(upn_ascii, i, i))
 end
