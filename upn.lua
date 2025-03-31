@@ -99,6 +99,14 @@ local function invoke(command)
 	return result
 end
 
+if tonumber(os.execute('test -f "/var/upn"')) == 1 then
+	os.execute("sudo mkdir /var/upn")
+end
+
+if tonumber(os.execute('test -f "/var/upn/default-repository"')) == 1 then
+	os.execute("sudo touch /var/upn/default-repository")
+end
+
 if action == "install" then
 	local pkg = arg[2]
 	if pkg == nil then
@@ -184,6 +192,36 @@ elseif action == "about" then
 	print(upn_ascii_real)
 	print("The Unified Package Network is a simple package manager written in Lua made for Linux, MacOS, and Windows.")
 	print("Created by alexfdev0 at https://github.com/alexfdev0")
+elseif action == "add-repository" then
+	local link = arg[2]
+	local name = arg[3]
+	if not link or not name then
+		print("\27[31mError:\27[0m Missing arguments.")
+	end
+
+	print("Adding repository '" .. name .. "' with the URL '" .. link .. "'")
+
+	if tonumber(os.execute("test -f /var/upn/repositories")) == 1 then
+		os.execute("sudo touch /var/upn/repositories")
+	end
+
+	os.execute("sudo echo '" .. name .. "' >> /var/upn/repositories")
+	os.execute("sudo touch /var/upn/" .. name .. ".rep")
+	os.execute("sudo echo '" .. link .. "' > /var/upn/" .. name .. ".rep")
+	print("Successfully added repository '" .. name .. "'")
+elseif action == "make-default" then
+	local name = arg[1]
+	if not name then
+		print("\27[31mError:\27[0m Missing name.")
+		os.exit(1)
+	end
+
+	if tonumber(os.execute("test -f '/var/upn/" .. name .. ".rep'")) == 1 then
+		print("\27[31mError:\27[0m Repository '" .. name .. "' does not exist on your system.")
+		os.exit(1)
+	end
+
+	os.execute("sudo echo '" .. name .. "' > /var/upn/default-repository")
 else
 	print("\27[31mError:\27[0m Invalid action '" .. action .. "'")
 end
