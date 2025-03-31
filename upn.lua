@@ -1,7 +1,7 @@
 #!/usr/bin/env lua
 
 --[[
--- Unified Package Manager
+-- Unified Package Network
 -- by alexfdev0
 -- Licensed under GNU GPL 3.0
 -- NOTE: All packages are user-submitted: if a package is malicious, it is not my fault.
@@ -99,23 +99,69 @@ local function invoke(command)
 	return result
 end
 
-if tonumber(os.execute('test -f "/var/upn"')) == 1 then
-	os.execute("sudo mkdir /var/upn")
+local s, i, e = os.execute('test -d "/etc/upn"')
+if tonumber(e) == 1 then
+	os.execute("sudo mkdir /etc/upn")
 end
 
-if tonumber(os.execute('test -f "/var/upn/default-repository"')) == 1 then
-	os.execute("sudo touch /var/upn/default-repository")
+local s, i, e = os.execute('test -f "/etc/upn/default-repository"')
+if tonumber(e) == 1 then
+	os.execute("sudo touch /etc/upn/default-repository")
+	os.execute("sudo echo 'default' > /etc/upn/default-repository")
+end
+
+local s, i, e = os.execute('test -f "/etc/upn/default.rep"')
+if tonumber(e) == 1 then
+	os.execute("sudo echo 'https://alexflax.xyz/api/upn/index.php' > /etc/upn/default.rep")
 end
 
 if action == "install" then
 	local pkg = arg[2]
+	local repository = arg[3]
+
+	local repo = ""
+	local rname = ""
+
+	if repository == nil then
+		local file = io.open("/etc/upn/default-repository", "r")
+		if not file then
+			print("\27[30mWarning:\27[0m No default repository so using fallback.")
+			repo = "https://alexflax.xyz/api/upn/index.php"
+		else
+			local contents = file:read("*a")
+			file:close()
+			local contents_ref = string.gsub(contents, "\n", "")
+			rname = contents_ref
+
+			local actual = io.open("/etc/upn/" .. contents_ref .. ".rep", "r")
+			if not actual then
+				print("\27[31mError:\27[0m Failed to find repository data for '" .. contents_ref .. "'")
+				os.exit(1)
+			end
+			contents = string.gsub(actual:read("*a"), "\n", "")
+			repo = contents
+		end
+	else
+		rname = repository
+		local file = io.open("/etc/upn/" .. repository .. ".rep")
+		if not file then
+			print("\27[31mError:\27[0m Could not find repository '" .. repository .. "'")
+			os.exit(1)
+		end
+		local contents = file:read("*a")
+		file:close()
+		contents = string.gsub(contents, "\n", "")
+		repo = contents
+	end
+
 	if pkg == nil then
 		print("\27[31mError:\27[0m No package name supplied.")
 		os.exit(1)
 	end
+
 	print("Installing package " .. pkg)
 	print("Checking for package...")
-	local result = invoke("curl -s https://alexflax.xyz/api/upn/index.php\\?method\\=get\\&name\\=" .. pkg)
+	local result = invoke("curl -L -s " .. repo .. "\\?method\\=get\\&name\\=" .. pkg)
 	print(result)
 	local res_json = cjson.decode(result)
 	if res_json.location == "PKG_NOT_FOUND" then
@@ -123,7 +169,7 @@ if action == "install" then
 		os.exit(1)
 	end
 	io.write("\n")
-	print("Package '" .. pkg .. "' was found in the UPN database.")
+	print("Package '" .. pkg .. "' was found in the '" .. rname .. "' database.")
 	print("Package will be installed from: " .. res_json.location)
 	print("Package will be installed to the following directory: " .. res_json.install_location)
 
@@ -149,9 +195,9 @@ if action == "install" then
 		os.execute(res_json.postinstall)
 	end
 
-	os.execute("touch /var/upn/" .. pkg .. ".rmv")
+	os.execute("touch /etc/upn/" .. pkg .. ".rmv")
 
-	local file = io.open("/var/upn/" .. pkg .. ".rmv", "w")
+	local file = io.open("/etc/upn/" .. pkg .. ".rmv", "w")
 	file:write(res_json.remove)
 	file:close()
 	
@@ -163,7 +209,7 @@ elseif action == "remove" then
 		os.exit(1)
 	end
 
-	local file = io.open("/var/upn/" .. pkg .. ".rmv")
+	local file = io.open("/etc/upn/" .. pkg .. ".rmv")
 	if file == nil then
 		print("\27[31mError:\27[0m Package '" .. pkg .. "' not installed.")
 		os.exit(1)
@@ -185,7 +231,7 @@ elseif action == "remove" then
 
 	os.execute(command)
 
-	os.execute("rm /var/upn/" .. pkg .. ".rmv")
+	os.execute("rm /etc/upn/" .. pkg .. ".rmv")
 
 	print("Successfully uninstalled package '" .. pkg .. "'")
 elseif action == "about" then
@@ -201,27 +247,40 @@ elseif action == "add-repository" then
 
 	print("Adding repository '" .. name .. "' with the URL '" .. link .. "'")
 
-	if tonumber(os.execute("test -f /var/upn/repositories")) == 1 then
-		os.execute("sudo touch /var/upn/repositories")
+	local s, i, e = os.execute("test -f /etc/upn/repositories")
+	if tonumber(e) == 1 then
+		os.execute("sudo touch /etc/upn/repositories")
 	end
 
-	os.execute("sudo echo '" .. name .. "' >> /var/upn/repositories")
-	os.execute("sudo touch /var/upn/" .. name .. ".rep")
-	os.execute("sudo echo '" .. link .. "' > /var/upn/" .. name .. ".rep")
+	os.execute("sudo echo '" .. name .. "' >> /etc/upn/repositories")
+	os.execute("sudo touch /etc/upn/" .. name .. ".rep")
+	os.execute("sudo echo '" .. link .. "' > /etc/upn/" .. name .. ".rep")
 	print("Successfully added repository '" .. name .. "'")
 elseif action == "make-default" then
-	local name = arg[1]
+	local name = arg[2]
 	if not name then
 		print("\27[31mError:\27[0m Missing name.")
 		os.exit(1)
 	end
 
-	if tonumber(os.execute("test -f '/var/upn/" .. name .. ".rep'")) == 1 then
+	local s, i, e = os.execute("test -f '/etc/upn/" .. name .. ".rep'")
+	if tonumber(e) == 1 then
 		print("\27[31mError:\27[0m Repository '" .. name .. "' does not exist on your system.")
 		os.exit(1)
 	end
 
-	os.execute("sudo echo '" .. name .. "' > /var/upn/default-repository")
+	os.execute("sudo echo '" .. name .. "' > /etc/upn/default-repository")
+elseif action == "remove-repository" then
+	local name = arg[2]
+
+	local s, i, e = os.execute('sudo test -f "/etc/upn/' .. name .. '.rep"')
+	if tonumber(e) == 1 then
+		print("\27[31mError:\27[0m Repository '" .. name .. "' does not exist on your system.")
+		os.exit(1)
+	end
+
+	os.execute('sudo rm /etc/upn/' .. name .. '.rep')
+	print("Successfully removed repository '" .. name .. "'")
 else
 	print("\27[31mError:\27[0m Invalid action '" .. action .. "'")
 end
