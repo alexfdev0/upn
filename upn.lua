@@ -88,7 +88,7 @@ local cjson = require("cjson")
 local action = arg[1]
 
 if not action then
-	print("Usage: upn [install/remove] <package> / about")
+	print("Usage: upn [install/remove] <package> <OPTIONAL repository> / about / add-repository <URL> <name> / [make-default/remove-repository] <name>")
 	os.exit(1)
 end
 
