@@ -1,6 +1,16 @@
 #!/usr/bin/env lua
 
 --[[
+NOTE: this package manager is a glorified pipe to bash with forced root access
+	  only run this if it's in a VM you don't care about
+	  as you are one bad package away from your drive getting rm -rf /'ed
+	  otherwise, if you care about your linux/mac/freebsd install, 
+	  please uninstall UPN from your system 
+	  (/usr/bin/upn for linux and freebsd and /usr/local/bin/upn for mac) 
+	  and do not re-install it.
+]]
+
+--[[
 -- Unified Package Network
 -- by alexfdev0
 -- Licensed under GNU GPL 3.0

@@ -1,5 +1,12 @@
 ![UPN](https://alexflax.xyz/api/upn/images/upn.png)
 # Unified Package Network
+NOTE: this package manager is a glorified pipe to bash with forced root access
+      only run this if it's in a VM you don't care about
+      as you are one bad package away from your drive getting rm -rf /'ed
+      otherwise, if you care about your linux/mac/freebsd install, 
+      please uninstall UPN from your system 
+      (/usr/bin/upn for linux and freebsd and /usr/local/bin/upn for mac) 
+      and do not re-install it.<br><br><br><br><br><br><br><br><br><br>
 UPN is a simple package manager for Linux, MacOS, FreeBSD, and other Unix-like systems that is written in Lua.<br><br>
 # Dependencies
 * Lua 5.1 or newer<br>
